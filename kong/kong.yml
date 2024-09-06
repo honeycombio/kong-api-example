@@ -1,0 +1,24 @@
+# kong/kong.yml
+_format_version: "2.1"
+_transform: true
+
+services:
+  - name: service1
+    url: http://service1:8000
+    routes:
+      - name: service1-route
+        paths:
+          - /service1
+  - name: service2
+    url: http://service2:8000
+    routes:
+      - name: service2-route
+        paths:
+          - /service2
+
+plugins:
+  - name: zipkin
+    config:
+      http_endpoint: http://otel-collector:9411/api/v2/spans
+      header_type: w3c
+      sample_ratio: 1

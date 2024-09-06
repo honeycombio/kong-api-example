@@ -1,0 +1,31 @@
+# otel-collector/otel-collector-config.yml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  zipkin:
+    endpoint: 0.0.0.0:9411
+
+processors:
+  batch:
+
+exporters:
+  otlp:
+    endpoint: 'api.honeycomb.io:443'
+    headers:
+      'x-honeycomb-team': '${HONEYCOMB_API_KEY}'
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp, zipkin]
+      processors: [batch]
+      exporters: [otlp]

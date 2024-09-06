@@ -1,0 +1,66 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  kong:
+    image: kong:latest
+    environment:
+      KONG_DATABASE: 'off'
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_PLUGINS: bundled,zipkin
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./kong:/usr/local/kong/declarative
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5 
+
+
+  service1:
+    build: ./service1
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
+      - PYTHONUNBUFFERED=1
+    networks:
+      - kong-net
+
+  service2:
+    build: ./service2
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
+      - PYTHONUNBUFFERED=1
+    networks:
+      - kong-net
+
+  client:
+    build: ./client
+    environment:
+      - COLLECTOR_HOST=otel-collector
+      - COLLECTOR_PORT=4318
+      - COLLECTOR_HEALTH_PORT=13133
+      - KONG_URL=http://kong:8000
+      - PYTHONUNBUFFERED=1
+    networks:
+      - kong-net
+    depends_on:
+      kong:
+        condition: service_healthy
+
+  network-diagnostic:
+    image: nicolaka/netshoot
+    command: sleep infinity
+    networks:
+      - kong-net
+
+networks:
+  kong-net:
+    external: true
